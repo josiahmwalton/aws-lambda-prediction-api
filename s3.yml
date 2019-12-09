@@ -1,0 +1,9 @@
+    # S3 Bucket
+    InferenceBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: inference
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256

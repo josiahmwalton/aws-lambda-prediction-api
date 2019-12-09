@@ -1,0 +1,77 @@
+
+
+service: procedure-code-prediction-lambda
+
+package:
+  exclude:
+    - node_modules/**
+    - postman/**
+    - venv/**
+    - __pycache__/**
+
+# Serverless plugins
+plugins:
+   - serverless-python-requirements
+   - serverless-offline-python
+   - serverless-iam-roles-per-function
+
+
+# Custom serverless variables
+custom:
+  stage: ${opt:stage, 'dev'}
+  kinesisStreamName: inference-kinesis-stream
+  pythonRequirements:
+    dockerizePip: true
+
+
+# Cloud provider information
+provider:
+  name: aws
+  runtime: python3.6
+  region: us-west-2
+  stage: ${self:custom.stage}
+
+
+# Lambda functions
+functions:
+  predict:
+    handler: functions/predict.procedure_code
+    iamRoleStatements:
+      - Effect: Allow
+        Resource: "*"
+        Action:
+          - "kinesis:Put*"
+    environment:
+      kinesisStreamName: ${self:custom.kinesisStreamName}
+    events:
+      - http:
+          path: predict
+          method: get
+
+  extract:
+    handler: functions/comprehend_medical.detect_entities
+    iamRoleStatements:
+      - Effect: Allow
+        Resource: "*"
+        Action:
+          - "kinesis:Put*"
+          - "comprehendmedical:*"
+    environment:
+      kinesisStreamName: ${self:custom.kinesisStreamName}
+    events:
+      - http:
+          path: extract
+          method: get
+
+
+# Cloud Formation
+resources:
+  Resources:
+    # Kinesis Data Stream
+    InferenceKinesisStream:
+      Type: AWS::Kinesis::Stream
+      Properties:
+        Name: ${self:custom.kinesisStreamName}
+        ShardCount: 1
+        RetentionPeriodHours: 24
+        
